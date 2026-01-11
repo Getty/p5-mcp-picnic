@@ -1,0 +1,154 @@
+#!/usr/bin/env perl
+# PODNAME: mcp-picnic
+# ABSTRACT: MCP Server for Picnic Supermarket
+
+use strict;
+use warnings;
+use Mojo::JSON qw(decode_json encode_json);
+use Scalar::Util qw(blessed);
+use MCP::Picnic;
+
+# Windows-compatible stdio setup
+if ($^O eq 'MSWin32') {
+  binmode STDIN,  ':raw';
+  binmode STDOUT, ':raw';
+  binmode STDERR, ':utf8';
+}
+STDOUT->autoflush(1);
+STDERR->autoflush(1);
+
+warn "mcp-picnic: Starting...\n";
+
+my $mcp = MCP::Picnic->new;
+my $server = $mcp->server;
+
+warn "mcp-picnic: Server created, entering main loop\n";
+
+# Custom stdio loop - MCP::Server::Transport::Stdio doesn't work on Windows
+while (1) {
+  warn "mcp-picnic: Waiting for input...\n";
+  my $line = read_line();
+
+  if (!defined $line) {
+    warn "mcp-picnic: EOF received, exiting\n";
+    last;
+  }
+
+  warn "mcp-picnic: Got line: $line\n" if length($line) < 500;
+
+  my $request = eval { decode_json($line) };
+  if ($@) {
+    warn "mcp-picnic: JSON parse error: $@\n";
+    next;
+  }
+
+  my $response = $server->handle($request, {});
+  if (!$response) {
+    warn "mcp-picnic: No response for request\n";
+    next;
+  }
+
+  if (blessed($response) && $response->isa('Mojo::Promise')) {
+    warn "mcp-picnic: Handling promise response\n";
+    $response->then(sub { send_response($_[0]) })->wait;
+  } else {
+    send_response($response);
+  }
+
+  warn "mcp-picnic: Response sent, looping\n";
+}
+
+warn "mcp-picnic: Exited main loop\n";
+
+sub read_line {
+  my $line = '';
+  while (1) {
+    my $bytes = sysread(STDIN, my $char, 1);
+    if (!defined $bytes) {
+      warn "mcp-picnic: sysread error: $!\n";
+      return undef;
+    }
+    if ($bytes == 0) {
+      warn "mcp-picnic: sysread returned 0 (EOF)\n";
+      return undef;
+    }
+    if ($char eq "\n") {
+      $line =~ s/\r$//;
+      return $line;
+    }
+    $line .= $char;
+  }
+}
+
+sub send_response {
+  my ($response) = @_;
+
+  # Fix protocol version mismatch - use client's version for compatibility
+  if ($response->{result} && $response->{result}{protocolVersion}) {
+    $response->{result}{protocolVersion} = '2024-11-05';
+  }
+
+  my $json = encode_json($response);
+  warn "mcp-picnic: Sending: $json\n" if length($json) < 500;
+  print $json . "\n";
+}
+
+__END__
+
+=head1 SYNOPSIS
+
+  # Set environment variables
+  export PICNIC_USER="your@email.de"
+  export PICNIC_PASS="your-password"
+  export PICNIC_COUNTRY="de"  # or "nl"
+
+  # Run the MCP server
+  mcp-picnic
+
+=head1 DESCRIPTION
+
+This script starts an MCP (Model Context Protocol) server for the Picnic
+Supermarket API. It communicates via stdio and is designed to be used with
+AI assistants like Claude Desktop.
+
+=head1 ENVIRONMENT VARIABLES
+
+=over 4
+
+=item PICNIC_USER
+
+Your Picnic account email address. Required.
+
+=item PICNIC_PASS
+
+Your Picnic account password. Required.
+
+=item PICNIC_COUNTRY
+
+Country code for your Picnic account: C<de> (Germany) or C<nl> (Netherlands).
+Defaults to C<de>.
+
+=back
+
+=head1 CLAUDE DESKTOP CONFIGURATION
+
+Add this to your Claude Desktop MCP configuration:
+
+  {
+    "mcpServers": {
+      "picnic": {
+        "command": "mcp-picnic",
+        "env": {
+          "PICNIC_USER": "your@email.de",
+          "PICNIC_PASS": "your-password",
+          "PICNIC_COUNTRY": "de"
+        }
+      }
+    }
+  }
+
+=head1 SEE ALSO
+
+L<MCP::Picnic>, L<WWW::Picnic>
+
+=cut

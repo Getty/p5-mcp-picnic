@@ -1,0 +1,10 @@
+Revision history for MCP-Picnic
+
+{{$NEXT}}
+  - Initial release
+  - MCP Server for Picnic Supermarket API
+  - Support for 2FA authentication flow
+  - Tools: search_products, get_cart, add_to_cart, remove_from_cart,
+    clear_cart, get_delivery_slots, set_delivery_slot, get_user,
+    get_categories, get_product_details, get_suggestions, verify_2fa
+  - HTTP server variant (mcp-picnic-http) for remote MCP and REST API
