@@ -227,9 +227,10 @@ my $mcp_cmd = find_mcp_picnic_command();
 my $server_config = {
   command => $mcp_cmd->{command},
   env => {
-    PICNIC_USER    => $email,
-    PICNIC_PASS    => $pass,
-    PICNIC_COUNTRY => $country,
+    MOJO_MCP_VERSION => '2024-11-05',  # Protocol version for Claude Desktop compatibility
+    PICNIC_USER      => $email,
+    PICNIC_PASS      => $pass,
+    PICNIC_COUNTRY   => $country,
   },
 };
 $server_config->{args} = $mcp_cmd->{args} if $mcp_cmd->{args};
@@ -281,9 +282,10 @@ sub get_credentials_and_show_config {
   my $server_config = {
     command => $mcp_cmd->{command},
     env => {
-      PICNIC_USER    => $email,
-      PICNIC_PASS    => $pass,
-      PICNIC_COUNTRY => $country,
+      MOJO_MCP_VERSION => '2024-11-05',  # Protocol version for Claude Desktop compatibility
+      PICNIC_USER      => $email,
+      PICNIC_PASS      => $pass,
+      PICNIC_COUNTRY   => $country,
     },
   };
   $server_config->{args} = $mcp_cmd->{args} if $mcp_cmd->{args};
