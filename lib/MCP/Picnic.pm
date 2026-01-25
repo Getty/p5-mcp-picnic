@@ -37,7 +37,7 @@ has picnic => (
 has json => (
   is      => 'ro',
   lazy    => 1,
-  default => sub { JSON::MaybeXS->new(utf8 => 0, pretty => 1) },
+  default => sub { JSON::MaybeXS->new(utf8 => 1, pretty => 1, canonical => 1, convert_blessed => 1) },
 );
 
 has server => (
