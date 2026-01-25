@@ -1,7 +1,10 @@
 Revision history for MCP-Picnic
 
 {{$NEXT}}
-  - Initial release
+    - Enable UTF-8 and convert_blessed for JSON::MaybeXS
+
+0.001
+    - Initial release
   - MCP Server for Picnic Supermarket API
   - Support for 2FA authentication flow
   - Tools: search_products, get_cart, add_to_cart, remove_from_cart,
