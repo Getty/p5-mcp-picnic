@@ -2,6 +2,13 @@ Revision history for MCP-Picnic
 
 {{$NEXT}}
     - Enable UTF-8 and convert_blessed for JSON::MaybeXS
+    - Translate all tool descriptions, result messages and documentation to
+      English
+    - Return MCP tool results via text_result, flagging error results with
+      is_error so clients can distinguish failures
+    - Translate the HTTP/REST server (mcp-picnic-http) responses and OpenAPI
+      spec to English
+    - Add a README
 
 0.001
     - Initial release

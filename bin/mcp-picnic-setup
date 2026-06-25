@@ -5,7 +5,8 @@
 use strict;
 use warnings;
 use JSON::MaybeXS;
-use File::Spec;
+use Path::Tiny;
+use Config;
 use File::Path qw(make_path);
 use Cwd qw(getcwd);
 
@@ -440,8 +441,8 @@ sub configure_project_config {
   my ($client, $server_config) = @_;
 
   my $cwd = getcwd();
-  my $target_dir = $client->{dir} ? File::Spec->catdir($cwd, $client->{dir}) : $cwd;
-  my $config_path = File::Spec->catfile($target_dir, $client->{file});
+  my $target_dir = $client->{dir} ? path($cwd, $client->{dir})->stringify : $cwd;
+  my $config_path = path($target_dir, $client->{file})->stringify;
 
   print t('current_dir') . ": $cwd\n";
   print t('config_file') . ": $config_path\n\n";
@@ -455,7 +456,7 @@ sub configure_project_config {
     chomp $alt;
     return unless $alt;
     $config_path = $alt;
-    ($target_dir) = (File::Spec->splitpath($config_path))[1];
+    $target_dir = path($config_path)->parent->stringify;
   }
   print "\n";
 
@@ -521,8 +522,7 @@ sub load_json_file {
 
 sub save_json_file {
   my ($path, $data) = @_;
-  my ($vol, $dir, $file) = File::Spec->splitpath($path);
-  my $target_dir = File::Spec->catpath($vol, $dir, '');
+  my $target_dir = path($path)->parent->stringify;
   make_path($target_dir) if $target_dir && !-d $target_dir;
 
   open my $fh, '>:utf8', $path or die "Cannot write: $path: $!";
@@ -545,14 +545,14 @@ sub print_success {
 sub get_claude_desktop_config_path {
   if ($^O eq 'MSWin32' || $^O eq 'cygwin') {
     my $appdata = $ENV{APPDATA} || "$ENV{USERPROFILE}\\AppData\\Roaming";
-    return File::Spec->catfile($appdata, 'Claude', 'claude_desktop_config.json');
+    return path($appdata, 'Claude', 'claude_desktop_config.json')->stringify;
   }
   elsif ($^O eq 'darwin') {
-    return File::Spec->catfile($ENV{HOME}, 'Library', 'Application Support', 'Claude', 'claude_desktop_config.json');
+    return path($ENV{HOME}, 'Library', 'Application Support', 'Claude', 'claude_desktop_config.json')->stringify;
   }
   else {
-    my $config_home = $ENV{XDG_CONFIG_HOME} || File::Spec->catdir($ENV{HOME}, '.config');
-    return File::Spec->catfile($config_home, 'Claude', 'claude_desktop_config.json');
+    my $config_home = $ENV{XDG_CONFIG_HOME} || path($ENV{HOME}, '.config')->stringify;
+    return path($config_home, 'Claude', 'claude_desktop_config.json')->stringify;
   }
 }
 
@@ -565,8 +565,8 @@ sub find_mcp_picnic_command {
     $perl_exe =~ s/\//\\/g;  # Normalize path separators
 
     # Find mcp-picnic script (not .bat)
-    for my $dir (File::Spec->path()) {
-      my $script = File::Spec->catfile($dir, 'mcp-picnic');
+    for my $dir (_path_dirs()) {
+      my $script = path($dir, 'mcp-picnic')->stringify;
       if (-f $script) {
         $script =~ s/\//\\/g;
         return { command => $perl_exe, args => [$script] };
@@ -590,11 +590,18 @@ sub find_mcp_picnic_command {
   }
 
   # On Unix, just return the command name
-  for my $dir (File::Spec->path()) {
-    my $cmd = File::Spec->catfile($dir, 'mcp-picnic');
+  for my $dir (_path_dirs()) {
+    my $cmd = path($dir, 'mcp-picnic')->stringify;
     return { command => 'mcp-picnic' } if -x $cmd;
   }
   return { command => 'mcp-picnic' };
+}
+
+# Replacement for File::Spec->path(): split $PATH on the platform separator.
+sub _path_dirs {
+  my @dirs = grep { length } split /\Q$Config{path_sep}\E/, ($ENV{PATH} // '');
+  for (@dirs) { s/\A"//; s/"\z//; }  # Windows PATH entries may be quoted
+  return @dirs;
 }
 
 __END__

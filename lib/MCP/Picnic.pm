@@ -71,24 +71,24 @@ sub _ensure_auth {
   return 1 if $self->_auth_state eq 'authenticated';
 
   if ($self->_auth_state eq 'pending_2fa') {
-    return { error => 1, message => "2FA-Verifizierung ausstehend! Bitte gib den SMS-Code ein, den du erhalten hast. Nutze dafuer das verify_2fa Tool." };
+    return { error => 1, message => "2FA verification pending. Please provide the SMS code you received using the verify_2fa tool." };
   }
 
   # Try to login
   my $login = eval { $self->picnic->login };
   if ($@) {
-    return { error => 1, message => "Login fehlgeschlagen: $@" };
+    return { error => 1, message => "Login failed: $@" };
   }
 
   if ($login->requires_2fa) {
     $self->_auth_state('pending_2fa');
     eval { $self->picnic->generate_2fa_code };
     if ($@) {
-      return { error => 1, message => "Konnte 2FA-Code nicht anfordern: $@" };
+      return { error => 1, message => "Could not request 2FA code: $@" };
     }
     return {
       error   => 1,
-      message => "2FA erforderlich! Ich habe dir eine SMS mit einem Verifizierungscode geschickt. Bitte gib den Code hier ein, damit ich ihn mit dem verify_2fa Tool verifizieren kann."
+      message => "2FA required. An SMS with a verification code has been sent to your phone. Please provide the code so it can be verified with the verify_2fa tool."
     };
   }
 
@@ -151,13 +151,13 @@ sub _build_server {
   # Tool: verify_2fa
   $server->tool(
     name        => 'verify_2fa',
-    description => 'Verifiziere den 2FA-Code der per SMS gesendet wurde. Nutze dieses Tool nachdem der User den Code eingegeben hat.',
+    description => 'Verify the 2FA code sent via SMS. Use this after the user has provided the code.',
     input_schema => {
       type       => 'object',
       properties => {
         code => {
           type        => 'string',
-          description => 'Der 6-stellige Code aus der SMS',
+          description => 'The 6-digit code from the SMS',
         },
       },
       required => ['code'],
@@ -166,29 +166,29 @@ sub _build_server {
       my ($tool, $args) = @_;
 
       unless ($self->_auth_state eq 'pending_2fa') {
-        return "Keine 2FA-Verifizierung ausstehend. Login wird automatisch durchgefuehrt wenn noetig.";
+        return $tool->text_result("No 2FA verification pending. Login happens automatically when needed.");
       }
 
       my $result = eval { $self->picnic->verify_2fa_code($args->{code}) };
       if ($@) {
-        return "2FA-Verifizierung fehlgeschlagen: $@";
+        return $tool->text_result("2FA verification failed: $@", 1);
       }
 
       $self->_auth_state('authenticated');
-      return "Erfolgreich verifiziert! Du kannst jetzt alle Picnic-Funktionen nutzen.";
+      return $tool->text_result("Successfully verified! You can now use all Picnic features.");
     },
   );
 
   # Tool: search_products
   $server->tool(
     name        => 'search_products',
-    description => 'Suche nach Produkten im Picnic Supermarkt. Gibt Produkte mit Name, Preis und ID zurueck.',
+    description => 'Search for products in the Picnic supermarket. Returns products with name, price and ID.',
     input_schema => {
       type       => 'object',
       properties => {
         query => {
           type        => 'string',
-          description => 'Suchbegriff (z.B. "Milch", "Haribo", "Bio Eier")',
+          description => 'Search term (e.g. "milk", "Haribo", "organic eggs")',
         },
       },
       required => ['query'],
@@ -197,28 +197,28 @@ sub _build_server {
       my ($tool, $args) = @_;
 
       my $auth = $self->_ensure_auth;
-      return $auth->{message} if ref $auth && $auth->{error};
+      return $tool->text_result($auth->{message}, 1) if ref $auth && $auth->{error};
 
       my $results = eval { $self->picnic->search($args->{query}) };
-      return "Suche fehlgeschlagen: $@" if $@;
+      return $tool->text_result("Search failed: $@", 1) if $@;
 
       my @items = map { $self->_article_to_hash($_) } $results->all_items;
-      return "Keine Produkte gefunden fuer '$args->{query}'" unless @items;
+      return $tool->text_result("No products found for '$args->{query}'") unless @items;
 
-      return $self->_to_json(\@items);
+      return $tool->text_result($self->_to_json(\@items));
     },
   );
 
   # Tool: get_product_details
   $server->tool(
     name        => 'get_product_details',
-    description => 'Hole detaillierte Informationen zu einem Produkt anhand seiner ID.',
+    description => 'Get detailed information about a product by its ID.',
     input_schema => {
       type       => 'object',
       properties => {
         product_id => {
           type        => 'string',
-          description => 'Die Produkt-ID (aus der Suche)',
+          description => 'The product ID (from search)',
         },
       },
       required => ['product_id'],
@@ -227,12 +227,12 @@ sub _build_server {
       my ($tool, $args) = @_;
 
       my $auth = $self->_ensure_auth;
-      return $auth->{message} if ref $auth && $auth->{error};
+      return $tool->text_result($auth->{message}, 1) if ref $auth && $auth->{error};
 
       my $article = eval { $self->picnic->get_article($args->{product_id}) };
-      return "Produkt nicht gefunden: $@" if $@;
+      return $tool->text_result("Product not found: $@", 1) if $@;
 
-      return $self->_to_json({
+      return $tool->text_result($self->_to_json({
         id            => $article->id,
         name          => $article->name,
         price         => $article->price,
@@ -241,20 +241,20 @@ sub _build_server {
         unit_quantity => $article->unit_quantity,
         image_ids     => $article->image_ids,
         labels        => $article->labels,
-      });
+      }));
     },
   );
 
   # Tool: get_suggestions
   $server->tool(
     name        => 'get_suggestions',
-    description => 'Hole Suchvorschlaege fuer einen teilweisen Suchbegriff.',
+    description => 'Get search suggestions for a partial search term.',
     input_schema => {
       type       => 'object',
       properties => {
         term => {
           type        => 'string',
-          description => 'Teilweiser Suchbegriff (z.B. "Mil" fuer Milch-Vorschlaege)',
+          description => 'Partial search term (e.g. "mil" for milk suggestions)',
         },
       },
       required => ['term'],
@@ -263,19 +263,19 @@ sub _build_server {
       my ($tool, $args) = @_;
 
       my $auth = $self->_ensure_auth;
-      return $auth->{message} if ref $auth && $auth->{error};
+      return $tool->text_result($auth->{message}, 1) if ref $auth && $auth->{error};
 
       my $suggestions = eval { $self->picnic->get_suggestions($args->{term}) };
-      return "Vorschlaege fehlgeschlagen: $@" if $@;
+      return $tool->text_result("Suggestions failed: $@", 1) if $@;
 
-      return $self->_to_json($suggestions);
+      return $tool->text_result($self->_to_json($suggestions));
     },
   );
 
   # Tool: get_cart
   $server->tool(
     name        => 'get_cart',
-    description => 'Zeige den aktuellen Warenkorb mit allen Artikeln, Gesamtpreis und ausgewaehltem Lieferslot.',
+    description => 'Show the current cart with all items, total price and selected delivery slot.',
     input_schema => {
       type       => 'object',
       properties => {},
@@ -284,29 +284,29 @@ sub _build_server {
       my ($tool, $args) = @_;
 
       my $auth = $self->_ensure_auth;
-      return $auth->{message} if ref $auth && $auth->{error};
+      return $tool->text_result($auth->{message}, 1) if ref $auth && $auth->{error};
 
       my $cart = eval { $self->picnic->get_cart };
-      return "Warenkorb konnte nicht geladen werden: $@" if $@;
+      return $tool->text_result("Could not load cart: $@", 1) if $@;
 
-      return $self->_to_json($self->_cart_to_hash($cart));
+      return $tool->text_result($self->_to_json($self->_cart_to_hash($cart)));
     },
   );
 
   # Tool: add_to_cart
   $server->tool(
     name        => 'add_to_cart',
-    description => 'Fuege ein Produkt zum Warenkorb hinzu.',
+    description => 'Add a product to the cart.',
     input_schema => {
       type       => 'object',
       properties => {
         product_id => {
           type        => 'string',
-          description => 'Die Produkt-ID',
+          description => 'The product ID',
         },
         count => {
           type        => 'integer',
-          description => 'Anzahl (Standard: 1)',
+          description => 'Quantity (default: 1)',
           default     => 1,
         },
       },
@@ -316,33 +316,33 @@ sub _build_server {
       my ($tool, $args) = @_;
 
       my $auth = $self->_ensure_auth;
-      return $auth->{message} if ref $auth && $auth->{error};
+      return $tool->text_result($auth->{message}, 1) if ref $auth && $auth->{error};
 
       my $count = $args->{count} // 1;
       my $cart = eval { $self->picnic->add_to_cart($args->{product_id}, $count) };
-      return "Konnte nicht zum Warenkorb hinzufuegen: $@" if $@;
+      return $tool->text_result("Could not add to cart: $@", 1) if $@;
 
-      return $self->_to_json({
-        message => "Produkt hinzugefuegt ($count x)",
+      return $tool->text_result($self->_to_json({
+        message => "Product added ($count x)",
         cart    => $self->_cart_to_hash($cart),
-      });
+      }));
     },
   );
 
   # Tool: remove_from_cart
   $server->tool(
     name        => 'remove_from_cart',
-    description => 'Entferne ein Produkt aus dem Warenkorb.',
+    description => 'Remove a product from the cart.',
     input_schema => {
       type       => 'object',
       properties => {
         product_id => {
           type        => 'string',
-          description => 'Die Produkt-ID',
+          description => 'The product ID',
         },
         count => {
           type        => 'integer',
-          description => 'Anzahl zu entfernen (Standard: 1)',
+          description => 'Quantity to remove (default: 1)',
           default     => 1,
         },
       },
@@ -352,23 +352,23 @@ sub _build_server {
       my ($tool, $args) = @_;
 
       my $auth = $self->_ensure_auth;
-      return $auth->{message} if ref $auth && $auth->{error};
+      return $tool->text_result($auth->{message}, 1) if ref $auth && $auth->{error};
 
       my $count = $args->{count} // 1;
       my $cart = eval { $self->picnic->remove_from_cart($args->{product_id}, $count) };
-      return "Konnte nicht aus Warenkorb entfernen: $@" if $@;
+      return $tool->text_result("Could not remove from cart: $@", 1) if $@;
 
-      return $self->_to_json({
-        message => "Produkt entfernt ($count x)",
+      return $tool->text_result($self->_to_json({
+        message => "Product removed ($count x)",
         cart    => $self->_cart_to_hash($cart),
-      });
+      }));
     },
   );
 
   # Tool: clear_cart
   $server->tool(
     name        => 'clear_cart',
-    description => 'Leere den gesamten Warenkorb.',
+    description => 'Empty the entire cart.',
     input_schema => {
       type       => 'object',
       properties => {},
@@ -377,19 +377,19 @@ sub _build_server {
       my ($tool, $args) = @_;
 
       my $auth = $self->_ensure_auth;
-      return $auth->{message} if ref $auth && $auth->{error};
+      return $tool->text_result($auth->{message}, 1) if ref $auth && $auth->{error};
 
       my $cart = eval { $self->picnic->clear_cart };
-      return "Warenkorb konnte nicht geleert werden: $@" if $@;
+      return $tool->text_result("Could not clear cart: $@", 1) if $@;
 
-      return "Warenkorb geleert!";
+      return $tool->text_result("Cart cleared!");
     },
   );
 
   # Tool: get_delivery_slots
   $server->tool(
     name        => 'get_delivery_slots',
-    description => 'Zeige verfuegbare Lieferzeitfenster.',
+    description => 'Show available delivery time windows.',
     input_schema => {
       type       => 'object',
       properties => {},
@@ -398,28 +398,28 @@ sub _build_server {
       my ($tool, $args) = @_;
 
       my $auth = $self->_ensure_auth;
-      return $auth->{message} if ref $auth && $auth->{error};
+      return $tool->text_result($auth->{message}, 1) if ref $auth && $auth->{error};
 
       my $slots = eval { $self->picnic->get_delivery_slots };
-      return "Lieferslots konnten nicht geladen werden: $@" if $@;
+      return $tool->text_result("Could not load delivery slots: $@", 1) if $@;
 
       my @available = map { $self->_slot_to_hash($_) } $slots->available_slots;
-      return "Keine verfuegbaren Lieferslots" unless @available;
+      return $tool->text_result("No available delivery slots") unless @available;
 
-      return $self->_to_json(\@available);
+      return $tool->text_result($self->_to_json(\@available));
     },
   );
 
   # Tool: set_delivery_slot
   $server->tool(
     name        => 'set_delivery_slot',
-    description => 'Waehle einen Lieferslot fuer die Bestellung aus.',
+    description => 'Select a delivery slot for the order.',
     input_schema => {
       type       => 'object',
       properties => {
         slot_id => {
           type        => 'string',
-          description => 'Die Slot-ID (aus get_delivery_slots)',
+          description => 'The slot ID (from get_delivery_slots)',
         },
       },
       required => ['slot_id'],
@@ -428,22 +428,22 @@ sub _build_server {
       my ($tool, $args) = @_;
 
       my $auth = $self->_ensure_auth;
-      return $auth->{message} if ref $auth && $auth->{error};
+      return $tool->text_result($auth->{message}, 1) if ref $auth && $auth->{error};
 
       my $cart = eval { $self->picnic->set_delivery_slot($args->{slot_id}) };
-      return "Lieferslot konnte nicht gesetzt werden: $@" if $@;
+      return $tool->text_result("Could not set delivery slot: $@", 1) if $@;
 
-      return $self->_to_json({
-        message => "Lieferslot ausgewaehlt!",
+      return $tool->text_result($self->_to_json({
+        message => "Delivery slot selected!",
         cart    => $self->_cart_to_hash($cart),
-      });
+      }));
     },
   );
 
   # Tool: get_user
   $server->tool(
     name        => 'get_user',
-    description => 'Zeige Informationen zum eingeloggten Benutzer (Name, Adresse, etc.).',
+    description => 'Show information about the logged-in user (name, address, etc.).',
     input_schema => {
       type       => 'object',
       properties => {},
@@ -452,25 +452,25 @@ sub _build_server {
       my ($tool, $args) = @_;
 
       my $auth = $self->_ensure_auth;
-      return $auth->{message} if ref $auth && $auth->{error};
+      return $tool->text_result($auth->{message}, 1) if ref $auth && $auth->{error};
 
       my $user = eval { $self->picnic->get_user };
-      return "Benutzerinfo konnte nicht geladen werden: $@" if $@;
+      return $tool->text_result("Could not load user info: $@", 1) if $@;
 
-      return $self->_to_json($self->_user_to_hash($user));
+      return $tool->text_result($self->_to_json($self->_user_to_hash($user)));
     },
   );
 
   # Tool: get_categories
   $server->tool(
     name        => 'get_categories',
-    description => 'Zeige Produktkategorien des Shops.',
+    description => 'Show the shop\'s product categories.',
     input_schema => {
       type       => 'object',
       properties => {
         depth => {
           type        => 'integer',
-          description => 'Tiefe der Kategorien (0 = nur Hauptkategorien)',
+          description => 'Category depth (0 = top-level categories only)',
           default     => 0,
         },
       },
@@ -479,13 +479,13 @@ sub _build_server {
       my ($tool, $args) = @_;
 
       my $auth = $self->_ensure_auth;
-      return $auth->{message} if ref $auth && $auth->{error};
+      return $tool->text_result($auth->{message}, 1) if ref $auth && $auth->{error};
 
       my $depth = $args->{depth} // 0;
       my $categories = eval { $self->picnic->get_categories($depth) };
-      return "Kategorien konnten nicht geladen werden: $@" if $@;
+      return $tool->text_result("Could not load categories: $@", 1) if $@;
 
-      return $self->_to_json($categories);
+      return $tool->text_result($self->_to_json($categories));
     },
   );
 
@@ -504,61 +504,69 @@ __END__
 
 =head1 SYNOPSIS
 
-  # Als stdio MCP Server (fuer Claude Desktop, etc.)
+  # As a stdio MCP server (for Claude Desktop, etc.)
   use MCP::Picnic;
   MCP::Picnic->run_stdio;
 
-  # Oder mit dem mitgelieferten Script:
+  # Or with the bundled script:
   # mcp-picnic
 
-  # Umgebungsvariablen setzen:
-  export PICNIC_USER="deine@email.de"
-  export PICNIC_PASS="dein-passwort"
-  export PICNIC_COUNTRY="de"  # oder "nl"
+  # Set the environment variables:
+  export PICNIC_USER="you@email.de"
+  export PICNIC_PASS="your-password"
+  export PICNIC_COUNTRY="de"  # or "nl"
 
 =head1 DESCRIPTION
 
-MCP::Picnic stellt einen MCP (Model Context Protocol) Server bereit, der
-AI-Assistenten wie Claude Zugriff auf die Picnic Supermarkt API gibt.
+MCP::Picnic provides an MCP (Model Context Protocol) server that gives AI
+assistants such as Claude access to the Picnic supermarket API.
 
-Der Server unterstuetzt:
+The server supports:
 
 =over 4
 
-=item * Produktsuche
+=item * Product search
 
-=item * Warenkorb-Verwaltung (hinzufuegen, entfernen, leeren)
+=item * Cart management (add, remove, clear)
 
-=item * Lieferzeitfenster anzeigen und auswaehlen
+=item * Viewing and selecting delivery time windows
 
-=item * Benutzerprofil anzeigen
+=item * Viewing the user profile
 
-=item * 2FA-Authentifizierung (interaktiv ueber den AI-Assistenten)
+=item * 2FA authentication (interactive, driven through the AI assistant)
 
 =back
 
-=head1 2FA AUTHENTIFIZIERUNG
+=head1 2FA AUTHENTICATION
 
-Picnic erfordert oft eine Zwei-Faktor-Authentifizierung per SMS. Der MCP Server
-handhabt dies interaktiv:
+Picnic often requires two-factor authentication via SMS. The MCP server
+handles this interactively:
 
-1. Bei der ersten Anfrage wird automatisch ein Login versucht
-2. Falls 2FA noetig ist, wird eine SMS an deine Handynummer geschickt
-3. Der AI-Assistent fragt dich nach dem Code
-4. Du gibst den Code ein, der Assistent verifiziert ihn
-5. Alle weiteren Anfragen funktionieren normal
+=over 4
+
+=item 1. On the first request, a login is attempted automatically.
+
+=item 2. If 2FA is required, an SMS is sent to your phone number.
+
+=item 3. The AI assistant asks you for the code.
+
+=item 4. You provide the code and the assistant verifies it.
+
+=item 5. All further requests work normally.
+
+=back
 
 =head1 CLAUDE DESKTOP INTEGRATION
 
-Fuege folgendes zu deiner Claude Desktop MCP-Konfiguration hinzu:
+Add the following to your Claude Desktop MCP configuration:
 
   {
     "mcpServers": {
       "picnic": {
         "command": "mcp-picnic",
         "env": {
-          "PICNIC_USER": "deine@email.de",
-          "PICNIC_PASS": "dein-passwort",
+          "PICNIC_USER": "you@email.de",
+          "PICNIC_PASS": "your-password",
           "PICNIC_COUNTRY": "de"
         }
       }
@@ -569,63 +577,65 @@ Fuege folgendes zu deiner Claude Desktop MCP-Konfiguration hinzu:
 
 =head2 verify_2fa
 
-Verifiziert den 2FA SMS-Code.
+Verifies the 2FA SMS code.
+
+B<Parameter:> C<code> (string, required)
 
 =head2 search_products
 
-Sucht nach Produkten.
+Searches for products.
 
 B<Parameter:> C<query> (string, required)
 
 =head2 get_product_details
 
-Holt Details zu einem Produkt.
+Gets details for a product.
 
 B<Parameter:> C<product_id> (string, required)
 
 =head2 get_suggestions
 
-Holt Suchvorschlaege.
+Gets search suggestions.
 
 B<Parameter:> C<term> (string, required)
 
 =head2 get_cart
 
-Zeigt den aktuellen Warenkorb.
+Shows the current cart.
 
 =head2 add_to_cart
 
-Fuegt ein Produkt zum Warenkorb hinzu.
+Adds a product to the cart.
 
 B<Parameter:> C<product_id> (string, required), C<count> (integer, default: 1)
 
 =head2 remove_from_cart
 
-Entfernt ein Produkt aus dem Warenkorb.
+Removes a product from the cart.
 
 B<Parameter:> C<product_id> (string, required), C<count> (integer, default: 1)
 
 =head2 clear_cart
 
-Leert den Warenkorb.
+Clears the cart.
 
 =head2 get_delivery_slots
 
-Zeigt verfuegbare Lieferzeitfenster.
+Shows available delivery time windows.
 
 =head2 set_delivery_slot
 
-Waehlt einen Lieferslot aus.
+Selects a delivery slot.
 
 B<Parameter:> C<slot_id> (string, required)
 
 =head2 get_user
 
-Zeigt Benutzerinformationen.
+Shows user information.
 
 =head2 get_categories
 
-Zeigt Produktkategorien.
+Shows product categories.
 
 B<Parameter:> C<depth> (integer, default: 0)
 

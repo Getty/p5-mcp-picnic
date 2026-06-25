@@ -59,7 +59,7 @@ get '/openapi.json' => sub ($c) {
     openapi => '3.1.0',
     info => {
       title       => 'Picnic Supermarket API',
-      description => 'API fuer Picnic Supermarkt - Produktsuche, Warenkorb, Lieferslots. Erfordert vorherige Authentifizierung ueber /api/auth/login',
+      description => 'API for the Picnic supermarket - product search, cart, delivery slots. Requires prior authentication via /api/auth/login',
       version     => $MCP::Picnic::VERSION,
     },
     servers => [{ url => $base_url }],
@@ -67,21 +67,21 @@ get '/openapi.json' => sub ($c) {
       '/api/auth/status' => {
         get => {
           operationId => 'getAuthStatus',
-          summary     => 'Pruefe Authentifizierungsstatus',
+          summary     => 'Check authentication status',
           responses   => { 200 => { description => 'Auth status (none, pending_2fa, authenticated)' } },
         },
       },
       '/api/auth/login' => {
         post => {
           operationId => 'login',
-          summary     => 'Login starten (loest ggf. 2FA SMS aus)',
+          summary     => 'Start login (may trigger a 2FA SMS)',
           responses   => { 200 => { description => 'Login result' } },
         },
       },
       '/api/auth/verify-2fa' => {
         post => {
           operationId  => 'verify2FA',
-          summary      => '2FA Code verifizieren',
+          summary      => 'Verify 2FA code',
           requestBody  => {
             required => \1,
             content  => {
@@ -89,7 +89,7 @@ get '/openapi.json' => sub ($c) {
                 schema => {
                   type => 'object',
                   properties => {
-                    code => { type => 'string', description => '6-stelliger SMS Code' },
+                    code => { type => 'string', description => '6-digit SMS code' },
                   },
                   required => ['code'],
                 },
@@ -102,44 +102,44 @@ get '/openapi.json' => sub ($c) {
       '/api/products' => {
         get => {
           operationId => 'searchProducts',
-          summary     => 'Produkte suchen',
+          summary     => 'Search products',
           parameters  => [
-            { name => 'q', in => 'query', required => \1, schema => { type => 'string' }, description => 'Suchbegriff' },
+            { name => 'q', in => 'query', required => \1, schema => { type => 'string' }, description => 'Search term' },
           ],
-          responses => { 200 => { description => 'Liste von Produkten' } },
+          responses => { 200 => { description => 'List of products' } },
         },
       },
       '/api/products/{id}' => {
         get => {
           operationId => 'getProduct',
-          summary     => 'Produktdetails holen',
+          summary     => 'Get product details',
           parameters  => [
             { name => 'id', in => 'path', required => \1, schema => { type => 'string' } },
           ],
-          responses => { 200 => { description => 'Produktdetails' } },
+          responses => { 200 => { description => 'Product details' } },
         },
       },
       '/api/suggestions' => {
         get => {
           operationId => 'getSuggestions',
-          summary     => 'Suchvorschlaege holen',
+          summary     => 'Get search suggestions',
           parameters  => [
-            { name => 'q', in => 'query', required => \1, schema => { type => 'string' }, description => 'Teilweiser Suchbegriff' },
+            { name => 'q', in => 'query', required => \1, schema => { type => 'string' }, description => 'Partial search term' },
           ],
-          responses => { 200 => { description => 'Vorschlaege' } },
+          responses => { 200 => { description => 'Suggestions' } },
         },
       },
       '/api/cart' => {
         get => {
           operationId => 'getCart',
-          summary     => 'Warenkorb anzeigen',
-          responses   => { 200 => { description => 'Warenkorb mit Artikeln und Gesamtpreis' } },
+          summary     => 'Show cart',
+          responses   => { 200 => { description => 'Cart with items and total price' } },
         },
       },
       '/api/cart/add' => {
         post => {
           operationId  => 'addToCart',
-          summary      => 'Produkt zum Warenkorb hinzufuegen',
+          summary      => 'Add product to cart',
           requestBody  => {
             required => \1,
             content  => {
@@ -155,13 +155,13 @@ get '/openapi.json' => sub ($c) {
               },
             },
           },
-          responses => { 200 => { description => 'Aktualisierter Warenkorb' } },
+          responses => { 200 => { description => 'Updated cart' } },
         },
       },
       '/api/cart/remove' => {
         post => {
           operationId  => 'removeFromCart',
-          summary      => 'Produkt aus Warenkorb entfernen',
+          summary      => 'Remove product from cart',
           requestBody  => {
             required => \1,
             content  => {
@@ -177,27 +177,27 @@ get '/openapi.json' => sub ($c) {
               },
             },
           },
-          responses => { 200 => { description => 'Aktualisierter Warenkorb' } },
+          responses => { 200 => { description => 'Updated cart' } },
         },
       },
       '/api/cart/clear' => {
         post => {
           operationId => 'clearCart',
-          summary     => 'Warenkorb leeren',
-          responses   => { 200 => { description => 'Bestaetigung' } },
+          summary     => 'Clear cart',
+          responses   => { 200 => { description => 'Confirmation' } },
         },
       },
       '/api/delivery-slots' => {
         get => {
           operationId => 'getDeliverySlots',
-          summary     => 'Verfuegbare Lieferzeitfenster',
-          responses   => { 200 => { description => 'Liste von Lieferslots' } },
+          summary     => 'Available delivery time windows',
+          responses   => { 200 => { description => 'List of delivery slots' } },
         },
       },
       '/api/delivery-slots/select' => {
         post => {
           operationId  => 'selectDeliverySlot',
-          summary      => 'Lieferslot auswaehlen',
+          summary      => 'Select delivery slot',
           requestBody  => {
             required => \1,
             content  => {
@@ -212,24 +212,24 @@ get '/openapi.json' => sub ($c) {
               },
             },
           },
-          responses => { 200 => { description => 'Aktualisierter Warenkorb mit Slot' } },
+          responses => { 200 => { description => 'Updated cart with slot' } },
         },
       },
       '/api/user' => {
         get => {
           operationId => 'getUser',
-          summary     => 'Benutzerinformationen',
-          responses   => { 200 => { description => 'User-Profil' } },
+          summary     => 'User information',
+          responses   => { 200 => { description => 'User profile' } },
         },
       },
       '/api/categories' => {
         get => {
           operationId => 'getCategories',
-          summary     => 'Produktkategorien',
+          summary     => 'Product categories',
           parameters  => [
-            { name => 'depth', in => 'query', schema => { type => 'integer', default => 0 }, description => 'Kategorie-Tiefe' },
+            { name => 'depth', in => 'query', schema => { type => 'integer', default => 0 }, description => 'Category depth' },
           ],
-          responses => { 200 => { description => 'Kategorien' } },
+          responses => { 200 => { description => 'Categories' } },
         },
       },
     },
@@ -259,7 +259,7 @@ post '/api/auth/login' => sub ($c) {
   } else {
     $c->render(json => {
       status  => 'authenticated',
-      message => 'Erfolgreich eingeloggt!',
+      message => 'Successfully logged in!',
     });
   }
 };
@@ -268,24 +268,24 @@ post '/api/auth/verify-2fa' => sub ($c) {
   my $data = $c->req->json // {};
   my $code = $data->{code};
 
-  return $c->render(json => { error => 'Code erforderlich' }, status => 400) unless $code;
+  return $c->render(json => { error => 'Code required' }, status => 400) unless $code;
 
   unless ($mcp->_auth_state eq 'pending_2fa') {
     return $c->render(json => {
       status  => $mcp->_auth_state,
-      message => 'Keine 2FA-Verifizierung ausstehend',
+      message => 'No 2FA verification pending',
     });
   }
 
   my $result = eval { $picnic->verify_2fa_code($code) };
   if ($@) {
-    return $c->render(json => { error => "2FA fehlgeschlagen: $@" }, status => 401);
+    return $c->render(json => { error => "2FA failed: $@" }, status => 401);
   }
 
   $mcp->_auth_state('authenticated');
   $c->render(json => {
     status  => 'authenticated',
-    message => 'Erfolgreich verifiziert!',
+    message => 'Successfully verified!',
   });
 };
 
@@ -301,7 +301,7 @@ get '/api/products' => sub ($c) {
   return unless $auth;
 
   my $results = eval { $picnic->search($q) };
-  return $c->render(json => { error => "Suche fehlgeschlagen: $@" }, status => 500) if $@;
+  return $c->render(json => { error => "Search failed: $@" }, status => 500) if $@;
 
   my @items = map { _article_hash($_) } $results->all_items;
   $c->render(json => \@items);
@@ -314,7 +314,7 @@ get '/api/products/:id' => sub ($c) {
   return unless $auth;
 
   my $article = eval { $picnic->get_article($id) };
-  return $c->render(json => { error => "Produkt nicht gefunden: $@" }, status => 404) if $@;
+  return $c->render(json => { error => "Product not found: $@" }, status => 404) if $@;
 
   $c->render(json => {
     id            => $article->id,
@@ -335,7 +335,7 @@ get '/api/suggestions' => sub ($c) {
   return unless $auth;
 
   my $suggestions = eval { $picnic->get_suggestions($q) };
-  return $c->render(json => { error => "Fehler: $@" }, status => 500) if $@;
+  return $c->render(json => { error => "Error: $@" }, status => 500) if $@;
 
   $c->render(json => $suggestions);
 };
@@ -345,7 +345,7 @@ get '/api/cart' => sub ($c) {
   return unless $auth;
 
   my $cart = eval { $picnic->get_cart };
-  return $c->render(json => { error => "Fehler: $@" }, status => 500) if $@;
+  return $c->render(json => { error => "Error: $@" }, status => 500) if $@;
 
   $c->render(json => _cart_hash($cart));
 };
@@ -361,10 +361,10 @@ post '/api/cart/add' => sub ($c) {
   return unless $auth;
 
   my $cart = eval { $picnic->add_to_cart($product_id, $count) };
-  return $c->render(json => { error => "Fehler: $@" }, status => 500) if $@;
+  return $c->render(json => { error => "Error: $@" }, status => 500) if $@;
 
   $c->render(json => {
-    message => "Hinzugefuegt ($count x)",
+    message => "Added ($count x)",
     cart    => _cart_hash($cart),
   });
 };
@@ -380,10 +380,10 @@ post '/api/cart/remove' => sub ($c) {
   return unless $auth;
 
   my $cart = eval { $picnic->remove_from_cart($product_id, $count) };
-  return $c->render(json => { error => "Fehler: $@" }, status => 500) if $@;
+  return $c->render(json => { error => "Error: $@" }, status => 500) if $@;
 
   $c->render(json => {
-    message => "Entfernt ($count x)",
+    message => "Removed ($count x)",
     cart    => _cart_hash($cart),
   });
 };
@@ -393,9 +393,9 @@ post '/api/cart/clear' => sub ($c) {
   return unless $auth;
 
   my $cart = eval { $picnic->clear_cart };
-  return $c->render(json => { error => "Fehler: $@" }, status => 500) if $@;
+  return $c->render(json => { error => "Error: $@" }, status => 500) if $@;
 
-  $c->render(json => { message => 'Warenkorb geleert' });
+  $c->render(json => { message => 'Cart cleared' });
 };
 
 get '/api/delivery-slots' => sub ($c) {
@@ -403,7 +403,7 @@ get '/api/delivery-slots' => sub ($c) {
   return unless $auth;
 
   my $slots = eval { $picnic->get_delivery_slots };
-  return $c->render(json => { error => "Fehler: $@" }, status => 500) if $@;
+  return $c->render(json => { error => "Error: $@" }, status => 500) if $@;
 
   my @available = map { _slot_hash($_) } $slots->available_slots;
   $c->render(json => \@available);
@@ -419,10 +419,10 @@ post '/api/delivery-slots/select' => sub ($c) {
   return unless $auth;
 
   my $cart = eval { $picnic->set_delivery_slot($slot_id) };
-  return $c->render(json => { error => "Fehler: $@" }, status => 500) if $@;
+  return $c->render(json => { error => "Error: $@" }, status => 500) if $@;
 
   $c->render(json => {
-    message => 'Lieferslot ausgewaehlt',
+    message => 'Delivery slot selected',
     cart    => _cart_hash($cart),
   });
 };
@@ -432,7 +432,7 @@ get '/api/user' => sub ($c) {
   return unless $auth;
 
   my $user = eval { $picnic->get_user };
-  return $c->render(json => { error => "Fehler: $@" }, status => 500) if $@;
+  return $c->render(json => { error => "Error: $@" }, status => 500) if $@;
 
   $c->render(json => _user_hash($user));
 };
@@ -444,7 +444,7 @@ get '/api/categories' => sub ($c) {
   return unless $auth;
 
   my $categories = eval { $picnic->get_categories($depth) };
-  return $c->render(json => { error => "Fehler: $@" }, status => 500) if $@;
+  return $c->render(json => { error => "Error: $@" }, status => 500) if $@;
 
   $c->render(json => $categories);
 };
@@ -467,10 +467,10 @@ sub _check_auth ($c, $mcp) {
 }
 
 sub _auth_status_message ($state) {
-  return 'Nicht eingeloggt' if $state eq 'none';
-  return '2FA-Code erforderlich - SMS wurde gesendet' if $state eq 'pending_2fa';
-  return 'Eingeloggt' if $state eq 'authenticated';
-  return 'Unbekannt';
+  return 'Not logged in' if $state eq 'none';
+  return '2FA code required - SMS has been sent' if $state eq 'pending_2fa';
+  return 'Logged in' if $state eq 'authenticated';
+  return 'Unknown';
 }
 
 sub _article_hash ($article) {
