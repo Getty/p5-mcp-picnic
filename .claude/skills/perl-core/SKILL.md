@@ -68,7 +68,9 @@ Why: bare subs hide what the call needs (`$gm` passed manually each time), can't
 
 ## JSON
 
-- **`JSON::MaybeXS`** always. When encoding, set `canonical => 1, convert_blessed => 1` on the encoder object.
+- **`JSON::MaybeXS`** always — never `JSON::PP`, `JSON::XS` or `Cpanel::JSON::XS` directly. Encoders get `canonical => 1, convert_blessed => 1`.
+- **Booleans: `JSON->true` / `JSON->false`.** `use JSON::MaybeXS;` covers both the codec and the booleans.
+- `$YAML::XS::Boolean = 'JSON::PP'` is one of YAML::XS's fixed mode names, not a module choice — leave it alone.
 
 ## DBIC-ish result classes
 
@@ -83,6 +85,7 @@ Why: bare subs hide what the call needs (`$gm` passed manually each time), can't
 - ❌ `default => sub { ... }` for a non-trivial Moose attribute default (use `lazy_build`)
 - ❌ 4-space indent in new Perl files
 - ❌ `File::Spec` in new code
+- ❌ `JSON::PP::true` / `JSON::PP::false` as barewords (use `JSON->true` / `JSON->false`)
 - ❌ `Data::Dumper` in shipped code (use `DDP` / `Data::Printer` for debug, strip before commit)
 
 ## Changelog (the Changes file)
