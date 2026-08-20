@@ -4,7 +4,7 @@ description: "Write tests for MCP::Picnic. Network-free: cover module load, tool
 allowed-tools: Read, Grep, Glob, Edit, Bash
 briefing:
   skills:
-    - perl-core
+    - getty-perl-core
     - perl-mcp
 ---
 

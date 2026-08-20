@@ -4,7 +4,7 @@ description: "Write or improve POD for MCP::Picnic using the @Author::GETTY PodW
 allowed-tools: Read, Grep, Glob, Edit
 briefing:
   skills:
-    - perl-release-author-getty
+    - getty-perl-release-author-getty
 ---
 
 You write POD for **MCP::Picnic**, a `[@Author::GETTY]` Dist::Zilla distribution.

@@ -4,9 +4,9 @@ description: "Audit cpanfile and dist.ini before an MCP::Picnic release — Gett
 allowed-tools: Read, Bash, Glob, Grep
 briefing:
   skills:
-    - perl-release-author-getty
+    - getty-perl-release-author-getty
     - perl-release-dist-ini
-    - perl-core
+    - getty-perl-core
 ---
 
 You are the picnic-release-checker for **MCP::Picnic**.

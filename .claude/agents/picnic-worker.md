@@ -4,8 +4,8 @@ description: "Default MCP::Picnic worker — implement, refactor, debug and test
 allowed-tools: Read, Edit, Write, Bash, Glob, Grep
 briefing:
   skills:
-    - perl-core
-    - perl-moo
+    - getty-perl-core
+    - getty-perl-moo
     - perl-mcp
     - perl-release-dist-ini
 ---
