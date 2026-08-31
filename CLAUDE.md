@@ -7,36 +7,32 @@ login flow.
 
 This distribution ships its own house rules (`.claude/rules/`), agents (`.claude/agents/`)
 and skills (`.claude/skills/`). The build/test/POD/release machinery comes from the
-`[@Author::GETTY]` plugin bundle — see the **perl-release-author-getty** and
+`[@Author::GETTY]` plugin bundle — see the **getty-perl-release-author-getty** and
 **perl-release-dist-ini** skills. This file documents only what's specific to MCP::Picnic.
 
 ## House rules
 
-Engineering discipline, architecture and release rules live in `.claude/rules/picnic-rules.md`
-— apply them to every task. The essentials:
-
-- **Moo + `namespace::clean`.** No Moose. Backend access only via `WWW::Picnic`; MCP wiring
-  only via `MCP::Server`'s `$server->tool(...)`.
-- **English only** in all POD, tool descriptions and user-facing strings (the historic 0.001
-  code carried German prose — new and edited code is English).
-- **Tool handler signature is `sub { my ($tool, $args) = @_ }`** — `$tool` is the `MCP::Tool`
-  instance; the `MCP::Picnic` object is `$self`, captured from the enclosing closure.
-- **Auth gate:** every tool except `verify_2fa` runs `$self->_ensure_auth` first.
-- **`our $VERSION` lives only in `lib/MCP/Picnic.pm`.** `bin/` reads `$MCP::Picnic::VERSION`.
-- **`dzil release` only with explicit maintainer go-ahead.**
+Engineering discipline, the delegation lock, coordination and release rules live in
+`.claude/rules/mcp-picnic-rules.md` (auto-loaded every turn). The Perl/Moo, MCP and
+architecture conventions live in the skills named below — don't look for them here.
 
 ## Delegation
 
+Delegate behavior-relevant code to the right agent instead of touching it yourself — the
+principle and lanes are in `.claude/rules/mcp-picnic-rules.md`.
+
 | Task | Agent |
 |---|---|
-| Implement / refactor / debug / test code | `picnic-worker` (default) |
-| Write or improve POD | `pod-writer` |
-| Add / extend tests | `perl-test-writer` |
-| Pre-release audit (cpanfile pins, version placement, Changes, build) | `picnic-release-checker` |
+| Implement / refactor / debug behavior-relevant code | `mcp-picnic-worker` (default) |
+| Write or improve POD | `mcp-picnic-pod-writer` |
+| Add / extend tests | `mcp-picnic-test-writer` |
+| Pre-release audit (cpanfile pins, version placement, Changes, build) | `mcp-picnic-release-checker` |
 
 Agents carry their skills via `briefing.skills` (the `briefing` plugin is enabled in
-`.claude/settings.json`). Skill sources live under `.claude/skills/` — the shared ones
-(`perl-core`, `perl-moo`, `perl-mcp`, `perl-release-*`) are hardlinked in via `manage-skills`.
+`.claude/settings.json`); the main agent delegates rather than loading them. Skill sources
+live under `.claude/skills/`: `mcp-picnic-core` (project-owned) plus the hardlinked shared
+skills (`getty-perl-core`, `getty-perl-moo`, `perl-mcp`, `perl-release-dist-ini`,
+`getty-perl-release-author-getty`, `kanban-issues-karr-cli`).
 
 ## Structure
 
@@ -71,10 +67,12 @@ to verify packaging (the `bin/` scripts must be included).
 
 ## Related
 
+- `mcp-picnic-core` skill — the Picnic-specific composition: tool-handler shape, the auth/2FA
+  gate, `WWW::Picnic` delegation, `_*_to_hash` projection
 - `perl-mcp` skill — MCP server patterns in Perl (`MCP::Server`, `$server->tool`, handler
   signature, `text_result`)
-- `perl-core` / `perl-moo` skills — house Perl style and Moo patterns
-- `perl-release-author-getty` / `perl-release-dist-ini` skills — build/POD/release workflow
+- `getty-perl-core` / `getty-perl-moo` skills — house Perl style and Moo patterns
+- `getty-perl-release-author-getty` / `perl-release-dist-ini` skills — build/POD/release workflow
 - `WWW::Picnic` — the backend client this server wraps
 - Picnic: <https://picnic.app/>
 ```
