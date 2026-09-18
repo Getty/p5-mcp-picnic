@@ -1,0 +1,20 @@
+---
+claimed_at: 2026-09-18T04:15:19Z
+claimed_by: mcp-picnic-worker
+class: standard
+completed: 2026-09-18T04:15:19Z
+created: 2026-08-31T04:43:11Z
+id: 1
+priority: medium
+started: 2026-09-18T03:29:03Z
+status: done
+tags:
+- projection
+- consistency
+title: Project get_suggestions and get_categories through projection helpers
+updated: 2026-09-18T04:15:19Z
+---
+
+get_suggestions (lib/MCP/Picnic.pm:271) and get_categories (lib/MCP/Picnic.pm:488) pass the raw WWW::Picnic result straight to _to_json, unlike every other tool which projects through a _*_to_hash helper. The entity-projection convention (only expose fields with a real consumer) is bypassed here. Add _suggestion_to_hash / _category_to_hash (or document why these two are intentionally raw).
+
+Live-API bug fixed: get_suggestions/get_categories project via _suggestion_to_hash/_category_to_hash over all_suggestions/all_categories; no more blessed Result object into the convert_blessed encoder. Handler-level regression test added. prove green (49 tests), dzil build clean.
