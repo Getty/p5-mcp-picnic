@@ -1,0 +1,20 @@
+---
+claimed_at: 2026-09-18T04:15:24Z
+claimed_by: mcp-picnic-worker
+class: standard
+completed: 2026-09-18T04:15:24Z
+created: 2026-08-31T04:43:15Z
+id: 2
+priority: low
+started: 2026-09-18T03:29:07Z
+status: done
+tags:
+- projection
+- consistency
+title: get_product_details builds an inline hash instead of a _*_to_hash helper
+updated: 2026-09-18T04:15:24Z
+---
+
+lib/MCP/Picnic.pm:235-244 hand-builds the projection hash inside the tool handler, duplicating most of _article_to_hash plus a few detail-only fields. Every other tool delegates projection to a helper. Extract a _article_detail_to_hash helper so the handler stays a thin auth-gate + eval + project + encode block like its siblings.
+
+get_product_details now delegates to extracted _article_detail_to_hash (all 8 detail fields kept). Projection test added.
