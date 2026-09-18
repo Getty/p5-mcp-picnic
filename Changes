@@ -1,6 +1,6 @@
 Revision history for MCP-Picnic
 
-{{$NEXT}}
+0.001     2026-09-18 19:29:01Z
     - Initial release
     - MCP server exposing the Picnic Supermarket API (via WWW::Picnic)
       to AI assistants such as Claude
