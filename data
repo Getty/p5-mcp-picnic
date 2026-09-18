@@ -1,0 +1,24 @@
+---
+claimed_at: 2026-09-18T04:29:25Z
+claimed_by: p5-mcp-picnic
+class: standard
+completed: 2026-09-18T04:29:25Z
+created: 2026-09-18T04:25:51Z
+id: 5
+priority: high
+started: 2026-09-18T04:28:34Z
+status: done
+tags:
+- release
+- changes
+title: Changes has duplicate 0.001 headers after build
+updated: 2026-09-18T04:29:25Z
+---
+
+Changes lines 13-20 still contain a hand-written "0.001" section ("- Initial release" boilerplate) sitting directly below the unreleased-changes placeholder block (Changes lines 3-11), even though MCP::Picnic has never been released to CPAN (confirmed: metacpan release lookup for MCP-Picnic returns 404, no git tags exist in this repo).
+
+At dzil build / dzil release time, the NextRelease plugin rewrites the placeholder to "0.001" plus a timestamp, using the current dollar-VERSION (lib/MCP/Picnic.pm line 11). Confirmed empirically by running dzil build into a scratch directory: the built Changes file ends up with TWO adjacent "0.001" headers back to back -- the freshly generated one (5 real bullets) immediately followed by the leftover boilerplate one.
+
+This does not fail the release changes-has-content test (verified: passes both normally and with RELEASE_TESTING forced), so it will not stop dzil release from running -- but it ships a malformed Changes file to CPAN and feeds a duplicated, confusing entry to the GitHub release-notes generator, which reads the newest changelog section.
+
+Fix: merge lines 13-20 into the placeholder block (lines 3-11) into a single comprehensive first-release entry, per house convention that a never-released dist writes one document under the placeholder describing what 0.001 IS, not a changelog of how it got there. Non-behavioral text edit -- safe to do directly or via the worker agent.
