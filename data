@@ -1,0 +1,20 @@
+---
+claimed_at: 2026-09-18T04:15:28Z
+claimed_by: mcp-picnic-worker
+class: standard
+completed: 2026-09-18T04:15:28Z
+created: 2026-08-31T04:43:19Z
+id: 3
+priority: low
+started: 2026-09-18T03:29:11Z
+status: done
+tags:
+- projection
+- over-exposure
+title: _cart_to_hash exposes raw items structure
+updated: 2026-09-18T04:15:28Z
+---
+
+lib/MCP/Picnic.pm:116 sets items => $cart->items, passing the raw WWW::Picnic cart-item structures straight through convert_blessed. The convention is to expose only fields with a real consumer via a projection helper. Decide the intended item shape and project each item through a _cart_item_to_hash rather than leaking the backend structure.
+
+_cart_to_hash projects items through new _cart_item_to_hash {id,name,count,price}; kept backend key count (non-renaming convention, cf. total_count). Fake::Cart test updated + helper test added.
