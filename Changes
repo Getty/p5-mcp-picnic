@@ -1,20 +1,16 @@
 Revision history for MCP-Picnic
 
 {{$NEXT}}
-    - Enable UTF-8 and convert_blessed for JSON::MaybeXS
-    - Translate all tool descriptions, result messages and documentation to
-      English
-    - Return MCP tool results via text_result, flagging error results with
-      is_error so clients can distinguish failures
-    - Translate the HTTP/REST server (mcp-picnic-http) responses and OpenAPI
-      spec to English
-    - Add a README
-
-0.001
     - Initial release
-  - MCP Server for Picnic Supermarket API
-  - Support for 2FA authentication flow
-  - Tools: search_products, get_cart, add_to_cart, remove_from_cart,
-    clear_cart, get_delivery_slots, set_delivery_slot, get_user,
-    get_categories, get_product_details, get_suggestions, verify_2fa
-  - HTTP server variant (mcp-picnic-http) for remote MCP and REST API
+    - MCP server exposing the Picnic Supermarket API (via WWW::Picnic)
+      to AI assistants such as Claude
+    - Interactive 2FA authentication flow (verify_2fa)
+    - Tools: search_products, get_product_details, get_suggestions,
+      get_cart, add_to_cart, remove_from_cart, clear_cart,
+      get_delivery_slots, set_delivery_slot, get_user, get_categories
+    - HTTP server variant (mcp-picnic-http) for remote MCP and a REST API
+    - Tool results returned via text_result, with error results flagged
+      via is_error so clients can distinguish failures
+    - JSON responses encoded as UTF-8 with convert_blessed
+    - English tool descriptions, result messages and documentation
+    - README
