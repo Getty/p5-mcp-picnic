@@ -37,7 +37,7 @@ has picnic => (
 has json => (
   is      => 'ro',
   lazy    => 1,
-  default => sub { JSON::MaybeXS->new(utf8 => 1, pretty => 1, canonical => 1, convert_blessed => 1) },
+  default => sub { JSON::MaybeXS->new(utf8 => 1, canonical => 1, convert_blessed => 1) },
 );
 
 has server => (
@@ -108,12 +108,36 @@ sub _article_to_hash {
   };
 }
 
+sub _article_detail_to_hash {
+  my ($self, $article) = @_;
+  return {
+    id            => $article->id,
+    name          => $article->name,
+    price         => $article->price,
+    price_info    => $article->price_info,
+    description   => $article->description,
+    unit_quantity => $article->unit_quantity,
+    image_ids     => $article->image_ids,
+    labels        => $article->labels,
+  };
+}
+
+sub _cart_item_to_hash {
+  my ($self, $item) = @_;
+  return {
+    id    => $item->{id},
+    name  => $item->{name},
+    count => $item->{count},
+    price => $item->{price},
+  };
+}
+
 sub _cart_to_hash {
   my ($self, $cart) = @_;
   return {
     total_count   => $cart->total_count,
     total_price   => $cart->total_price,
-    items         => $cart->items,
+    items         => [ map { $self->_cart_item_to_hash($_) } @{ $cart->items } ],
     delivery_slot => $cart->selected_slot,
   };
 }
@@ -137,6 +161,24 @@ sub _user_to_hash {
     lastname  => $user->lastname,
     address   => $user->address,
     phone     => $user->phone,
+  };
+}
+
+sub _suggestion_to_hash {
+  my ($self, $suggestion) = @_;
+  return {
+    suggestion => $suggestion->{suggestion},
+    type       => $suggestion->{type},
+  };
+}
+
+sub _category_to_hash {
+  my ($self, $category) = @_;
+  return {
+    id    => $category->{id},
+    name  => $category->{name},
+    type  => $category->{type},
+    level => $category->{level},
   };
 }
 
@@ -232,16 +274,7 @@ sub _build_server {
       my $article = eval { $self->picnic->get_article($args->{product_id}) };
       return $tool->text_result("Product not found: $@", 1) if $@;
 
-      return $tool->text_result($self->_to_json({
-        id            => $article->id,
-        name          => $article->name,
-        price         => $article->price,
-        price_info    => $article->price_info,
-        description   => $article->description,
-        unit_quantity => $article->unit_quantity,
-        image_ids     => $article->image_ids,
-        labels        => $article->labels,
-      }));
+      return $tool->text_result($self->_to_json($self->_article_detail_to_hash($article)));
     },
   );
 
@@ -268,7 +301,8 @@ sub _build_server {
       my $suggestions = eval { $self->picnic->get_suggestions($args->{term}) };
       return $tool->text_result("Suggestions failed: $@", 1) if $@;
 
-      return $tool->text_result($self->_to_json($suggestions));
+      my @suggestions = map { $self->_suggestion_to_hash($_) } $suggestions->all_suggestions;
+      return $tool->text_result($self->_to_json(\@suggestions));
     },
   );
 
@@ -485,7 +519,8 @@ sub _build_server {
       my $categories = eval { $self->picnic->get_categories($depth) };
       return $tool->text_result("Could not load categories: $@", 1) if $@;
 
-      return $tool->text_result($self->_to_json($categories));
+      my @categories = map { $self->_category_to_hash($_) } $categories->all_categories;
+      return $tool->text_result($self->_to_json(\@categories));
     },
   );
 
