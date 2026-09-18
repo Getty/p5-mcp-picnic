@@ -1,0 +1,21 @@
+---
+claimed_at: 2026-09-18T04:15:32Z
+claimed_by: mcp-picnic-worker
+class: standard
+completed: 2026-09-18T04:15:32Z
+created: 2026-08-31T04:43:24Z
+id: 4
+priority: low
+started: 2026-09-18T03:29:15Z
+status: done
+tags:
+- json
+- doc-drift
+title: JSON encoder uses pretty=1 while docs describe it as utf8/canonical/convert_blessed
+  only
+updated: 2026-09-18T04:15:32Z
+---
+
+The json attribute (lib/MCP/Picnic.pm:40) is built with pretty => 1, but the shared-encoder description in .claude/rules and CLAUDE.md lists only utf8, canonical, convert_blessed. Pretty-printing inflates stdio payloads sent to the model. Reconcile: either drop pretty from the encoder or add it to the documented encoder contract.
+
+Dropped pretty=1 from json encoder to match documented utf8/canonical/convert_blessed contract; smaller stdio payloads, no doc change. Tests compare decoded structures, not raw whitespace.
