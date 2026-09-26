@@ -26,13 +26,13 @@ principle and lanes are in `.claude/rules/mcp-picnic-rules.md`.
 | Implement / refactor / debug behavior-relevant code | `mcp-picnic-worker` (default) |
 | Write or improve POD | `mcp-picnic-pod-writer` |
 | Add / extend tests | `mcp-picnic-test-writer` |
-| Pre-release audit (cpanfile pins, version placement, Changes, build) | `mcp-picnic-release-checker` |
+| Commits, `Changes`, card → done, pre-release audit | `mcp-picnic-release-manager` |
 
 Agents carry their skills via `briefing.skills` (the `briefing` plugin is enabled in
 `.claude/settings.json`); the main agent delegates rather than loading them. Skill sources
 live under `.claude/skills/`: `mcp-picnic-core` (project-owned) plus the hardlinked shared
 skills (`getty-perl-core`, `getty-perl-moo`, `perl-mcp`, `perl-release-dist-ini`,
-`getty-perl-release-author-getty`, `kanban-issues-karr-cli`).
+`getty-perl-release-author-getty`, `kanban-issues-karr-coordination`).
 
 ## Structure
 

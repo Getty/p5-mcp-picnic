@@ -24,7 +24,7 @@ This rule depends on whether the Agent/Task tool is available to you.
 
 - **You can spawn subagents** (orchestrating main agent): Do NOT touch behavior-relevant
   code yourself — delegate to `mcp-picnic-worker`. Your lane: coordinate, inspect, plan,
-  review diffs, run tests, manage git, edit non-behavioral docs. When in doubt, delegate.
+  review diffs, run tests, edit non-behavioral docs. When in doubt, delegate.
   Why: only the `mcp-picnic-*` agents get their skills force-loaded via `briefing.skills`;
   you get no briefing and would touch internals with too little context. Specialist lanes:
 
@@ -33,7 +33,7 @@ This rule depends on whether the Agent/Task tool is available to you.
   | Implement / refactor / debug behavior-relevant code | `mcp-picnic-worker` (default) |
   | Write / extend tests | `mcp-picnic-test-writer` |
   | Write or improve POD | `mcp-picnic-pod-writer` |
-  | Pre-release audit | `mcp-picnic-release-checker` |
+  | Commits, `Changes`, card → done, pre-release audit | `mcp-picnic-release-manager` |
 
 - **You cannot spawn subagents** (you ARE an `mcp-picnic-*` agent): The delegation lock does
   not apply to you — implement, refactor, debug, and test per these rules and your skills.
@@ -41,6 +41,9 @@ This rule depends on whether the Agent/Task tool is available to you.
 Behavior-relevant = the tool registry in `_build_server`, the `_ensure_auth`/2FA state
 machine, `WWW::Picnic` delegation, the `_*_to_hash` projections, JSON encoding, the three
 `bin/` entry points, tests. Pure prose docs and `Changes` notes are not.
+
+**Only `mcp-picnic-release-manager` commits.** A worker leaves a commit-ready tree and hands its card
+to `review`; you then dispatch `mcp-picnic-release-manager` to cut the commit and close the card.
 
 ## Coordination — karr board (always in scope)
 
@@ -50,7 +53,7 @@ use it. Git-native kanban; state lives in `refs/karr/*`; this repo has its own b
 - `karr list --compact` / `karr board` — open work · `karr show ID` — detail
 - `karr create "Title" --priority high --tags a,b --body '…'` — new ticket
 - `karr move ID in-progress --claim NAME` — start · `karr handoff ID --claim NAME --note "…"` — to review
-- mutating commands auto-sync; full command surface: skill `kanban-issues-karr-cli`.
+- mutating commands auto-sync; full command surface: skill `kanban-issues-karr-coordination`.
 
 **Serialize board mutations when fanning out.** Keep implementation parallel if you like, but
 collect the results and then loop `karr move`/`handoff`/`sync` sequentially — N of them
@@ -61,7 +64,7 @@ landing at once is a resource event, not a cheap command.
 `dzil build` / `dzil test` are fine anytime. `dzil release` and any CPAN upload are STRICTLY
 forbidden without the maintainer's explicit go-ahead — even if a plan lists "release" as the
 next step. For anything heading toward release: stop and ask. Use the
-`mcp-picnic-release-checker` agent for the pre-release audit.
+`mcp-picnic-release-manager` agent for the pre-release audit.
 
 ## Project-specific hazards
 

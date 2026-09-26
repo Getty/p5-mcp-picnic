@@ -5,8 +5,8 @@ model: sonnet
 allowed-tools: Read, Grep, Glob, Edit
 briefing:
   skills:
-    - getty-perl-release-author-getty
     - mcp-picnic-core
+    - getty-perl-pod
 ---
 
 You write POD for **MCP::Picnic**, a `[@Author::GETTY]` Dist::Zilla distribution. The

@@ -8,7 +8,7 @@ briefing:
     - mcp-picnic-core
     - getty-perl-core
     - perl-mcp
-    - kanban-issues-karr-cli
+    - kanban-issues-karr-ticket
 ---
 
 You are the mcp-picnic-test-writer for **MCP::Picnic**. The conventions above are
