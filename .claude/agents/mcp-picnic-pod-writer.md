@@ -2,7 +2,7 @@
 name: mcp-picnic-pod-writer
 description: "Write or improve POD for MCP::Picnic using the @Author::GETTY PodWeaver conventions (inline =attr/=method/=synopsis/=seealso). Keeps the docs in English and cross-linked."
 model: sonnet
-allowed-tools: Read, Grep, Glob, Edit
+disallowedTools: Write, NotebookEdit, Bash
 briefing:
   skills:
     - mcp-picnic-core

@@ -2,7 +2,7 @@
 name: mcp-picnic-test-writer
 description: "Write MCP::Picnic tests. Network-free: cover module load, tool registration and the auth/2FA state machine without hitting the real Picnic API. Use when adding or extending test coverage."
 model: sonnet
-allowed-tools: Read, Grep, Glob, Edit, Bash
+disallowedTools: Write, NotebookEdit
 briefing:
   skills:
     - mcp-picnic-core

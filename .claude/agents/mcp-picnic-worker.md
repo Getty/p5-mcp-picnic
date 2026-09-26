@@ -2,7 +2,6 @@
 name: mcp-picnic-worker
 description: "Default MCP::Picnic worker — implement, refactor, debug and test code in this distribution. Pre-loaded with the MCP::Picnic core patterns, Getty's Perl house rules, Moo patterns and MCP server conventions. Leaves a commit-ready tree; never commits — commits belong to mcp-picnic-release-manager."
 model: inherit
-allowed-tools: Read, Edit, Write, Bash, Glob, Grep
 briefing:
   skills:
     - mcp-picnic-core
