@@ -96,8 +96,27 @@ The distribution ships three executables:
 Run the HTTP server with:
 
 ```bash
-mcp-picnic-http daemon -l http://*:3000
+mcp-picnic-http daemon
 ```
+
+It listens on `http://127.0.0.1:3000` and serves clients on the same host.
+
+**The HTTP endpoints act on your Picnic account** — whoever may call them reads your
+profile (name, address, phone number), reads and changes your cart and selects delivery
+slots. To make the server reachable from other hosts, through a reverse proxy or a tunnel
+(a ChatGPT Action needs that), set a token that every client must send:
+
+```bash
+export MCP_PICNIC_TOKEN="$(openssl rand -hex 32)"
+mcp-picnic-http daemon -l http://*:3000
+
+curl -H "Authorization: Bearer $MCP_PICNIC_TOKEN" http://picnic.example:3000/api/cart
+```
+
+Without `MCP_PICNIC_TOKEN` the server refuses to start on anything but a loopback address
+and rejects requests relayed by a proxy. With it, `/api/*` and `/mcp` answer `401` unless
+the request carries `Authorization: Bearer <token>`. Use TLS in front of it for anything
+but loopback; see `perldoc mcp-picnic-http` for the details.
 
 ## See also
 

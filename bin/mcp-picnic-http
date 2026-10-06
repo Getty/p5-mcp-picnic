@@ -5,14 +5,42 @@
 use strict;
 use warnings;
 use Mojolicious::Lite -signatures;
+use Mojo::URL;
+use Mojo::Util qw(secure_compare);
+use Digest::SHA qw(sha256);
 use MCP::Picnic;
+
+# Mojolicious listens on every interface unless told otherwise. This server
+# acts on one Picnic account, so its own default is loopback; -l and
+# MOJO_LISTEN still choose any other address.
+$ENV{MOJO_LISTEN} ||= 'http://127.0.0.1:3000';
 
 my $mcp = MCP::Picnic->new;
 my $picnic = $mcp->picnic;
 my $json = $mcp->json;
 
-# MCP endpoint (for Claude remote)
-any '/mcp' => $mcp->server->to_action;
+# The secret a client has to present as "Authorization: Bearer <token>".
+# Without one the server is only there for clients on the same host.
+my $token = $ENV{MCP_PICNIC_TOKEN} // '';
+my $token_digest = sha256($token);
+
+my $LOOPBACK = qr/\A(?:127(?:\.[0-9]{1,3}){3}|::1)\z/;
+
+# Headers a reverse proxy or tunnel adds. A request carrying one comes from
+# somewhere else, even though the connection itself arrives on loopback.
+my @PROXY_HEADERS = qw(Forwarded X-Forwarded-For X-Forwarded-Host X-Forwarded-Proto X-Real-IP);
+
+# Fail at startup rather than answer every request with an error: without a
+# token, an address other hosts can reach is a misconfiguration.
+app->hook(before_server_start => sub ($server, $app) {
+  return if length $token or !$server->can('listen');
+  my @exposed = grep { !_is_loopback_listen($_) } @{$server->listen};
+  return unless @exposed;
+  die "mcp-picnic-http: refusing to listen on @exposed without MCP_PICNIC_TOKEN.\n"
+    . "The endpoints act on the configured Picnic account. Set MCP_PICNIC_TOKEN to a\n"
+    . "secret that clients send as \"Authorization: Bearer <token>\", or listen on a\n"
+    . "loopback address only (the default is http://127.0.0.1:3000).\n";
+});
 
 # Info endpoint
 get '/' => sub ($c) {
@@ -55,8 +83,15 @@ get '/openapi.json' => sub ($c) {
   }
   $base_url =~ s{/$}{};
 
+  # Only announce the bearer scheme when the server really asks for it.
+  my %security = length $token ? (
+    components => { securitySchemes => { bearerAuth => { type => 'http', scheme => 'bearer' } } },
+    security   => [{ bearerAuth => [] }],
+  ) : ();
+
   $c->render(json => {
     openapi => '3.1.0',
+    %security,
     info => {
       title       => 'Picnic Supermarket API',
       description => 'API for the Picnic supermarket - product search, cart, delivery slots. Requires prior authentication via /api/auth/login',
@@ -235,6 +270,35 @@ get '/openapi.json' => sub ($c) {
     },
   });
 };
+
+#
+# Client authentication: everything below acts on the Picnic account
+#
+
+under sub ($c) {
+  if (length $token) {
+    my ($given) = ($c->req->headers->authorization // '') =~ /\ABearer\s+(\S+)\s*\z/i;
+
+    # Digests of equal length on both sides, so the comparison takes the same
+    # time whatever the client sent and however long the token is.
+    return 1 if defined $given && secure_compare(sha256($given), $token_digest);
+
+    $c->res->headers->www_authenticate('Bearer');
+    $c->render(json => { error => 'Unauthorized' }, status => 401);
+    return undef;
+  }
+
+  return 1 if _is_local_request($c);
+
+  $c->render(json => {
+    error   => 'Forbidden',
+    message => 'MCP_PICNIC_TOKEN is not set, so only clients on the same host are served',
+  }, status => 403);
+  return undef;
+};
+
+# MCP endpoint (for Claude remote)
+any '/mcp' => $mcp->server->to_action;
 
 #
 # Auth endpoints
@@ -453,6 +517,17 @@ get '/api/categories' => sub ($c) {
 # Helper functions
 #
 
+sub _is_loopback_listen ($location) {
+  my $host = Mojo::URL->new($location)->host // '';
+  $host =~ s/\A\[(.*)\]\z/$1/;
+  return $host =~ $LOOPBACK || lc $host eq 'localhost';
+}
+
+sub _is_local_request ($c) {
+  return 0 unless ($c->tx->remote_address // '') =~ $LOOPBACK;
+  return !grep { defined $c->req->headers->header($_) } @PROXY_HEADERS;
+}
+
 sub _check_auth ($c, $mcp) {
   my $auth = $mcp->_ensure_auth;
   if (ref $auth && $auth->{error}) {
@@ -526,18 +601,74 @@ __END__
   export PICNIC_PASS="your-password"
   export PICNIC_COUNTRY="de"
 
-  # Start server
+  # Local use: listens on http://127.0.0.1:3000, clients on this host only
+  mcp-picnic-http daemon
+
+  # Reachable from other hosts: clients must send the token
+  export MCP_PICNIC_TOKEN="$(openssl rand -hex 32)"
   mcp-picnic-http daemon -l http://*:3000
 
+  curl -H "Authorization: Bearer $MCP_PICNIC_TOKEN" http://picnic.example:3000/api/cart
+
   # Or with morbo for development
-  morbo mcp-picnic-http
+  morbo -l http://127.0.0.1:3000 mcp-picnic-http
 
 =head1 DESCRIPTION
 
 HTTP server providing both MCP protocol support (for Claude) and REST API
 (for ChatGPT and other clients).
 
+Every C</api/*> endpoint and C</mcp> acts on the one Picnic account the server
+is configured with: whoever may call them reads the profile (name, address,
+phone number), reads and changes the cart, selects a delivery slot and can
+trigger the login SMS. Do not make the server reachable from other hosts, a
+reverse proxy or a tunnel without setting C<MCP_PICNIC_TOKEN> -- see
+L</CLIENT AUTHENTICATION>.
+
+=head1 CLIENT AUTHENTICATION
+
+The server listens on C<http://127.0.0.1:3000> unless C<-l> or C<MOJO_LISTEN>
+names another location.
+
+With C<MCP_PICNIC_TOKEN> set, every request to C</api/*> and C</mcp> must carry
+the token as C<Authorization: Bearer E<lt>tokenE<gt>>. A request without it, or
+with a wrong one, is answered with C<401> before the Picnic account is touched.
+The token is read from that header only (never from the query string) and
+compared in constant time. C</openapi.json> then declares the matching
+C<bearerAuth> security scheme.
+
+Without C<MCP_PICNIC_TOKEN> the server is for clients on the same host only:
+
+=over 4
+
+=item *
+
+It refuses to start when a listen location is not a loopback address
+(C<127.0.0.0/8>, C<[::1]> or C<localhost>). This includes C<http://*:3000>,
+UNIX domain sockets, and C<hypnotoad> with its default of C<http://*:8080>.
+Plain C<morbo> falls under it too, because it binds C<http://*:3000> before the
+script is loaded -- pass C<-l http://127.0.0.1:3000>.
+
+=item *
+
+It answers C<403> to every request that does not come from a loopback address
+or that carries a proxy header (C<Forwarded>, C<X-Forwarded-For>,
+C<X-Forwarded-Host>, C<X-Forwarded-Proto>, C<X-Real-IP>). The header check is a
+safety net for a proxy or tunnel on the same host, not a guarantee: a proxy that
+adds none of these headers is not recognised. Behind a proxy, set the token.
+
+=back
+
+C</> and C</openapi.json> describe the API and are served without the token.
+
+The token is sent in the clear over plain HTTP. For anything but loopback, put
+the server behind TLS (a C<https://> listen location or a TLS-terminating
+proxy).
+
 =head1 ENDPOINTS
+
+With C<MCP_PICNIC_TOKEN> set, everything below needs the C<Authorization: Bearer>
+header.
 
 =head2 MCP Protocol
 
@@ -574,9 +705,13 @@ HTTP server providing both MCP protocol support (for Claude) and REST API
 
 =head1 CHATGPT INTEGRATION
 
-Import the OpenAPI schema from C</openapi.json> in your ChatGPT Action.
+A ChatGPT Action calls the server from the Internet, so C<MCP_PICNIC_TOKEN> is
+mandatory. Import the OpenAPI schema from C</openapi.json> in your ChatGPT Action
+and configure its authentication as "API Key" with auth type "Bearer", using the
+value of C<MCP_PICNIC_TOKEN>.
 
-The authentication flow for ChatGPT:
+The token only identifies the client. The server still has to log itself into
+Picnic, which ChatGPT drives like this:
 
 1. Call C</api/auth/login>
 2. If response has C<status: pending_2fa>, ask user for SMS code
@@ -592,6 +727,10 @@ The authentication flow for ChatGPT:
 =item PICNIC_PASS - Picnic account password
 
 =item PICNIC_COUNTRY - Country code (de/nl)
+
+=item MCP_PICNIC_TOKEN - Bearer token clients must send; required to listen on anything but loopback
+
+=item MOJO_LISTEN - Listen location(s), default C<http://127.0.0.1:3000> (same as C<-l>)
 
 =item OPENAPI_SERVER_URL - Override server URL in OpenAPI spec
 

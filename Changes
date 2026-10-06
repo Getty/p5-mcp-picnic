@@ -1,6 +1,16 @@
 Revision history for MCP-Picnic
 
 {{$NEXT}}
+    - mcp-picnic-http: clients can be required to authenticate. With
+      MCP_PICNIC_TOKEN set, /api/* and /mcp answer 401 unless the request
+      carries "Authorization: Bearer <token>" (compared in constant time);
+      /openapi.json declares the matching bearer security scheme
+    - mcp-picnic-http: listens on http://127.0.0.1:3000 by default instead
+      of every interface (-l / MOJO_LISTEN still choose another address)
+    - mcp-picnic-http: without MCP_PICNIC_TOKEN it refuses to start on a
+      non-loopback address and answers 403 to requests from other hosts or
+      relayed by a proxy. Deployments that listen on http://*:3000 or sit
+      behind a reverse proxy now have to set MCP_PICNIC_TOKEN
 
 0.001     2026-09-18 19:29:01Z
     - Initial release
