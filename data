@@ -1,0 +1,46 @@
+---
+claimed_at: 2026-10-25T01:17:34Z
+claimed_by: offen-2610
+class: standard
+completed: 2026-10-25T01:17:34Z
+created: 2026-10-06T19:43:42Z
+id: 6
+priority: high
+started: 2026-10-25T01:11:39Z
+status: done
+tags:
+- bug
+- encoding
+- utf8
+- review-2026-10-06
+title: 'Tool results are double UTF-8 encoded: every non-ASCII character arrives as
+  mojibake'
+updated: 2026-10-25T01:17:34Z
+---
+
+## What is wrong
+
+The encoder for tool results is built with `utf8 => 1` (`lib/MCP/Picnic.pm:40`), so `_to_json` returns UTF-8 **bytes**. That byte string is handed to `$tool->text_result(...)`, and MCP::Server's transports then run the whole response through `Mojo::JSON::encode_json` / `to_json` (`MCP/Server/Transport/Stdio.pm:56`), which expects **characters** and encodes them to UTF-8 a second time. WWW::Picnic decodes the API responses to character strings, so every product name, address and price with a non-ASCII character is hit.
+
+## Reproduce
+
+    my $p    = MCP::Picnic->new(user => 'u', pass => 'p');
+    my $text = $p->_to_json([{ name => "M\x{fc}sli \x{20ac}" }]);
+    my $wire = Mojo::JSON::encode_json({ content => [{ type => 'text', text => $text }] });
+    # client decodes $wire and parses the text:
+    # client sees name: MÃ¼sli â¬   expected: Müsli €
+
+For a German/Dutch supermarket that is most results (Müsli, Käse, Brötchen, every `€`). The model reads garbled names and searches with them.
+
+`t/tools.t` has no non-ASCII fixture, which is why this passes.
+
+## Done
+
+- The encoder used for `text_result` payloads produces characters (`utf8 => 0`); nothing else in the module needs bytes (`bin/mcp-picnic-http` renders through Mojolicious' own `json =>`).
+- A test drives a tool through `$server->handle`/the stdio encoding with a product named `Müsli` and asserts the client-side decoded text equals the original.
+- Changes entry.
+
+---
+Fleet review 2026-10-06 · kind: bug · confidence: verified
+
+Commit e590c85 (branch worktree-offen-2610). t/encoding.t was red against old lib, now green. Client must parse text with a character parser (from_json); decode_json would undo the double encoding.
