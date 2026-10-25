@@ -12,14 +12,16 @@ and skills (`.claude/skills/`). The build/test/POD/release machinery comes from 
 
 ## House rules
 
-Engineering discipline, the delegation lock, coordination and release rules live in
+Engineering discipline, the delegation lock, coordination and the publish gate are shared
+house rules (skilletor bundle `getty-cpan-dist@getty`); lanes and hazards live in
 `.claude/rules/mcp-picnic-rules.md` (auto-loaded every turn). The Perl/Moo, MCP and
 architecture conventions live in the skills named below — don't look for them here.
 
 ## Delegation
 
 Delegate behavior-relevant code to the right agent instead of touching it yourself — the
-principle and lanes are in `.claude/rules/mcp-picnic-rules.md`.
+principle is the shared rule `getty-agent-delegation`, the lanes are in
+`.claude/rules/mcp-picnic-rules.md`.
 
 | Task | Agent |
 |---|---|
