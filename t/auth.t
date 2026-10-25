@@ -11,7 +11,7 @@ use Test::More;
   package Fake::Picnic;
   sub new {
     my ($class, %args) = @_;
-    return bless { calls => [], requires_2fa => $args{requires_2fa} }, $class;
+    return bless { calls => [], requires_2fa => $args{requires_2fa}, generate_failures => $args{generate_failures} // 0, verify_failures => $args{verify_failures} // 0 }, $class;
   }
   sub _record { push @{$_[0]{calls}}, $_[1] }
   sub calls { @{$_[0]{calls}} }
@@ -21,10 +21,16 @@ use Test::More;
     $self->_record('login');
     return Fake::LoginResult->new($self->{requires_2fa});
   }
-  sub generate_2fa_code { $_[0]->_record('generate_2fa_code'); return 1 }
+  sub generate_2fa_code {
+    my ($self) = @_;
+    $self->_record('generate_2fa_code');
+    die "SMS gateway down\n" if $self->{generate_failures}-- > 0;
+    return 1;
+  }
   sub verify_2fa_code {
     my ($self, $code) = @_;
     $self->_record("verify_2fa_code:$code");
+    die "code expired\n" if $self->{verify_failures}-- > 0;
     return 1;
   }
 }
@@ -135,6 +141,35 @@ sub tool_named {
   is $mcp->_auth_state, 'authenticated', 'state is authenticated after verify_2fa';
   ok grep({ $_ eq 'verify_2fa_code:123456' } $mcp->picnic->calls),
     'verify_2fa_code was called with the provided code';
+}
+
+# --- a failed SMS request must not leave the state stuck in pending_2fa --
+{
+  my $mcp = build_mcp(requires_2fa => 1, generate_failures => 1);
+  my $gate = $mcp->_ensure_auth;
+  like $gate->{message}, qr/Could not request 2FA code/, 'SMS request failure is reported';
+  is $mcp->_auth_state, 'none', 'state falls back to none when generate_2fa_code dies';
+
+  $gate = $mcp->_ensure_auth;
+  like $gate->{message}, qr/2FA required/, 'next call retries the login and requests a new code';
+  is $mcp->_auth_state, 'pending_2fa', 'state is pending_2fa once the SMS was sent';
+  is_deeply [$mcp->picnic->calls], [('login', 'generate_2fa_code') x 2],
+    'login and code request were repeated';
+}
+
+# --- a failed verification (expired code) restarts the login -------------
+{
+  my $mcp = build_mcp(requires_2fa => 1, verify_failures => 1);
+  $mcp->_ensure_auth;
+  my $tool = tool_named($mcp, 'verify_2fa');
+  my $result = $tool->call({ code => '000000' }, {});
+  ok $result->{isError}, 'failed verify_2fa returns isError true';
+  is $mcp->_auth_state, 'none', 'state falls back to none after a failed verification';
+
+  my $gate = $mcp->_ensure_auth;
+  is $mcp->_auth_state, 'pending_2fa', 'next call logs in again and requests a fresh code';
+  is scalar(grep { $_ eq 'generate_2fa_code' } $mcp->picnic->calls), 2,
+    'a second SMS was requested';
 }
 
 done_testing;

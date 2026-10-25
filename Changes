@@ -4,6 +4,10 @@ Revision history for MCP-Picnic
     - Tool results keep non-ASCII characters intact: product names,
       addresses and prices such as "Müsli" or "€" reached the client as
       mojibake because the JSON payload was UTF-8 encoded twice
+    - The 2FA login no longer gets stuck: when the SMS request fails, or a
+      verification fails because the code expired, the next tool call logs
+      in again and requests a fresh code instead of reporting a pending
+      verification forever (also for POST /api/auth/verify-2fa)
     - mcp-picnic-http: clients can be required to authenticate. With
       MCP_PICNIC_TOKEN set, /api/* and /mcp answer 401 unless the request
       carries "Authorization: Bearer <token>" (compared in constant time);

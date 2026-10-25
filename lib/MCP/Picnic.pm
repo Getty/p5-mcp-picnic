@@ -81,11 +81,11 @@ sub _ensure_auth {
   }
 
   if ($login->requires_2fa) {
-    $self->_auth_state('pending_2fa');
     eval { $self->picnic->generate_2fa_code };
     if ($@) {
       return { error => 1, message => "Could not request 2FA code: $@" };
     }
+    $self->_auth_state('pending_2fa');
     return {
       error   => 1,
       message => "2FA required. An SMS with a verification code has been sent to your phone. Please provide the code so it can be verified with the verify_2fa tool."
@@ -213,7 +213,9 @@ sub _build_server {
 
       my $result = eval { $self->picnic->verify_2fa_code($args->{code}) };
       if ($@) {
-        return $tool->text_result("2FA verification failed: $@", 1);
+        # the code may have expired: start over so the next call requests a fresh SMS
+        $self->_auth_state('none');
+        return $tool->text_result("2FA verification failed: $@ Call any tool again to receive a new code.", 1);
       }
 
       $self->_auth_state('authenticated');

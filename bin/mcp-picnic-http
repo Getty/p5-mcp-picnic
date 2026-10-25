@@ -343,6 +343,7 @@ post '/api/auth/verify-2fa' => sub ($c) {
 
   my $result = eval { $picnic->verify_2fa_code($code) };
   if ($@) {
+    $mcp->_auth_state('none');
     return $c->render(json => { error => "2FA failed: $@" }, status => 401);
   }
 
