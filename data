@@ -1,0 +1,35 @@
+---
+claimed_at: 2026-10-25T01:17:39Z
+claimed_by: offen-2610
+class: standard
+completed: 2026-10-25T01:17:39Z
+created: 2026-10-06T19:43:47Z
+id: 7
+priority: medium
+started: 2026-10-25T01:11:45Z
+status: done
+tags:
+- bug
+- auth
+- review-2026-10-06
+title: 2FA state gets stuck in pending_2fa when the SMS request fails or the code
+  expires
+updated: 2026-10-25T01:17:39Z
+---
+
+## What is wrong
+
+`_ensure_auth` sets the state to `pending_2fa` **before** asking Picnic for the SMS (`lib/MCP/Picnic.pm:84-85`). If `generate_2fa_code` dies, the error is returned once ("Could not request 2FA code"), but the state stays `pending_2fa`. From then on every tool call takes the early return at the top of `_ensure_auth` (`:72-75`) and tells the model "2FA verification pending. Please provide the SMS code", although no SMS was ever sent.
+
+The same dead end exists when the SMS is sent but the code expires or never arrives: `verify_2fa` (`:204-218`) fails and leaves the state pending, and there is no path that requests a new code or starts the login again. Only restarting the server process helps. For the long-running `mcp-picnic-http` that is a real outage.
+
+## Done
+
+- State becomes `pending_2fa` only after `generate_2fa_code` succeeded; on failure it falls back to `none` so the next call retries the login.
+- A way to get a fresh code: either a `resend_2fa` tool / `POST /api/auth/resend`, or `verify_2fa` resetting to `none` after a failed verification so the next call logs in again and triggers a new SMS.
+- Tests in `t/auth.t` with a mocked WWW::Picnic whose `generate_2fa_code` dies once.
+
+---
+Fleet review 2026-10-06 · kind: bug · confidence: verified
+
+Commit b36f964. Decision: failed verify_2fa resets to none (no resend tool/endpoint, no new public interface); a wrong code also triggers a new SMS on the next call. Applied to POST /api/auth/verify-2fa too. t/auth.t tests were red against old lib.
