@@ -6,7 +6,7 @@ requires 'JSON::MaybeXS', '1.004000';
 requires 'Path::Tiny', '0.100';
 requires 'namespace::clean', '0.27';
 requires 'Mojolicious', '9.0';
-requires 'Term::ReadKey', '0';
+requires 'Term::ReadKey';
 
 on test => sub {
   requires 'Test::More', '1.302015';
