@@ -2,6 +2,8 @@
 # PODNAME: mcp-picnic
 # ABSTRACT: MCP Server for Picnic Supermarket
 
+our $VERSION = '0.002';
+
 use strict;
 use warnings;
 use MCP::Picnic;

@@ -2,6 +2,8 @@
 # PODNAME: mcp-picnic-setup
 # ABSTRACT: Setup wizard for Picnic MCP Server in various MCP clients
 
+our $VERSION = '0.002';
+
 use strict;
 use warnings;
 use JSON::MaybeXS;

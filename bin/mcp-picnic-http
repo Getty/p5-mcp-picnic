@@ -2,6 +2,8 @@
 # PODNAME: mcp-picnic-http
 # ABSTRACT: HTTP MCP + REST server for Picnic Supermarket
 
+our $VERSION = '0.002';
+
 use strict;
 use warnings;
 use Mojolicious::Lite -signatures;
