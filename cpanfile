@@ -9,6 +9,7 @@ requires 'Term::ReadKey';
 requires 'WWW::Picnic', '0.101';
 
 on test => sub {
+  requires 'MCP', '0.15';
   requires 'Test::More', '1.302015';
 };
 
