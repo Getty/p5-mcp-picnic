@@ -32,8 +32,8 @@ principle is the shared rule `getty-agent-delegation`, the lanes are in
 
 Agents carry their skills via `briefing.skills` (the `briefing` plugin is enabled in
 `.claude/settings.json`); the main agent delegates rather than loading them. Skill sources
-live under `.claude/skills/`: `mcp-picnic-core` (project-owned) plus the hardlinked shared
-skills (`getty-perl-core`, `getty-perl-moo`, `perl-mcp`, `perl-release-dist-ini`,
+live under `.claude/skills/`: `mcp-picnic-core` (project-owned) plus the shared skills
+skilletor installs from `.claude/skilletor.json` (`getty-perl-core`, `getty-perl-moo`, `perl-mcp`, `perl-release-dist-ini`,
 `getty-perl-release-author-getty`, `kanban-issues-karr-coordination`).
 
 ## Structure
