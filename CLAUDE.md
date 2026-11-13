@@ -20,7 +20,7 @@ architecture conventions live in the skills named below — don't look for them 
 ## Delegation
 
 Delegate behavior-relevant code to the right agent instead of touching it yourself — the
-principle is the shared rule `getty-agent-delegation`, the lanes are in
+principle is the shared rule `agent-delegation`, the lanes are in
 `.claude/rules/mcp-picnic-rules.md`.
 
 | Task | Agent |
