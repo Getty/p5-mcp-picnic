@@ -3,12 +3,11 @@ name: mcp-picnic-test-writer
 description: "Write MCP::Picnic tests. Network-free: cover module load, tool registration and the auth/2FA state machine without hitting the real Picnic API. Use when adding or extending test coverage."
 model: sonnet
 disallowedTools: Write, NotebookEdit
-briefing:
-  skills:
-    - mcp-picnic-core
-    - getty-perl-core
-    - perl-mcp
-    - kanban-issues-karr-ticket
+skills:
+  - mcp-picnic-core
+  - getty-perl-core
+  - perl-mcp
+  - kanban-issues-karr-ticket
 ---
 
 You are the mcp-picnic-test-writer for **MCP::Picnic**. The conventions above are

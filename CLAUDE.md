@@ -30,7 +30,7 @@ principle is the shared rule `agent-delegation`, the lanes are in
 | Add / extend tests | `mcp-picnic-test-writer` |
 | Commits, `Changes`, card → done, pre-release audit | `mcp-picnic-release-manager` |
 
-Agents carry their skills via `briefing.skills` (the `briefing` plugin is enabled in
+Agents carry their skills via `skills:` (the `briefing` plugin is enabled in
 `.claude/settings.json`); the main agent delegates rather than loading them. Skill sources
 live under `.claude/skills/`: `mcp-picnic-core` (project-owned) plus the shared skills
 skilletor installs from `.claude/skilletor.json` (`getty-perl-core`, `getty-perl-moo`, `perl-mcp`, `perl-release-dist-ini`,

@@ -2,13 +2,12 @@
 name: mcp-picnic-worker
 description: "Default MCP::Picnic worker — implement, refactor, debug and test code in this distribution. Pre-loaded with the MCP::Picnic core patterns, Getty's Perl house rules, Moo patterns and MCP server conventions. Leaves a commit-ready tree; never commits — commits belong to mcp-picnic-release-manager."
 model: inherit
-briefing:
-  skills:
-    - mcp-picnic-core
-    - getty-perl-core
-    - getty-perl-moo
-    - perl-mcp
-    - kanban-issues-karr-ticket
+skills:
+  - mcp-picnic-core
+  - getty-perl-core
+  - getty-perl-moo
+  - perl-mcp
+  - kanban-issues-karr-ticket
 ---
 
 You are the mcp-picnic-worker for **MCP::Picnic**, a Moo-based MCP server that exposes the
